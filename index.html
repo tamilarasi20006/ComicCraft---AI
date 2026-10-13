@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ComicCraft</title>
+<style>
+body { background:#FFEB3B; font-family: Arial; text-align:center; padding:20px; }
+.box { background:white; border:4px solid black; border-radius:15px; padding:20px; max-width:600px; margin:auto; box-shadow: 8px 8px 0 black; }
+textarea, select { width:95%; padding:10px; border:3px solid black; border-radius:10px; font-size:16px; margin:10px 0; }
+button { background:#E53935; color:white; border:3px solid black; padding:15px; width:100%; border-radius:10px; font-size:18px; font-weight:bold; cursor:pointer; box-shadow: 4px 4px 0 black; }
+button:active { transform: translate(2px,2px); box-shadow: 2px 2px 0 black; }
+#result { margin-top:20px; display:none; }
+.panel { background:white; border:3px solid black; border-radius:10px; padding:15px; margin:10px 0; text-align:left; box-shadow: 4px 4px 0 black; }
+</style>
+</head>
+<body>
+<h1 style="font-size:50px; margin:10px;">ComicCraft</h1>
+<p>Create your own AI comic story!</p>
+
+<div class="box">
+<label>Enter your story idea:</label><br>
+<textarea id="story" rows="4" placeholder="Ex: A dog superhero saves the city from a giant monster..."></textarea><br>
+<label>Choose Style:</label><br>
+<select id="style"><option>cartoon</option><option>anime</option><option>realistic</option></select><br>
+<button onclick="generate()">Generate Comic</button>
+</div>
+
+<div class="box" id="result">
+<h3>Your Comic Story:</h3>
+<div id="panels"></div>
+</div>
+
+<script>
+async function generate(){
+  const story = document.getElementById('story').value;
+  const style = document.getElementById('style').value;
+  if(!story.trim()){ alert('Please type a story da!'); return; }
+  
+  document.getElementById('result').style.display='block';
+  document.getElementById('panels').innerHTML = '<p>Generating... Wait da!</p>';
+  
+  const res = await fetch('/generate', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ story: story, style: style })
+  });
+  const data = await res.json();
+  
+  let html = '';
+  data.panels.forEach((p,i)=>{
+    html += `<div class="panel"><b>Panel ${i+1}:</b> ${p}</div>`;
+  });
+  document.getElementById('panels').innerHTML = html;
+}
+</script>
+</body>
+</html>
