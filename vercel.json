@@ -1,5 +1,7 @@
 {
+  "version": 2,
   "rewrites": [
+    { "source": "/generate", "destination": "/api/generate" },
     { "source": "/(.*)", "destination": "/server.js" }
   ]
 }
