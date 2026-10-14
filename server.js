@@ -1,52 +1,34 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 const Groq = require('groq-sdk');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static('.'));
+app.use(express.static(__dirname));
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-app.post('/generate', async (req, res) => {
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.post('/api/generate', async (req, res) => {
   try {
-    const story = req.body.story || req.body.storyIdea || "";
-    const style = req.body.style || "cartoon";
-    if (!story) return res.json({ panels: ["Type a story da!", "Panel 2", "Panel 3", "Panel 4"] });
-
-    console.log("Story:", story);
-
+    const { prompt } = req.body;
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: 'You are a comic writer. Return ONLY JSON: {"panels": ["1","2","3","4"]}' },
-        { role: "user", content: `Story: ${story}` }
-      ]
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.1-8b-instant",
     });
-
-    let text = completion.choices[0].message.content;
-    console.log(text);
-    const m = text.match(/\{[\s\S]*\}/);
-    if (m) return res.json(JSON.parse(m[0]));
-    return res.json({ panels: text.split("\n").slice(0,4) });
-
-  } catch (e) {
-    console.log("Error:", e.message);
-    return res.json({ 
-      panels: [
-        `${req.body.story} - Hero starts adventure!`,
-        `Big villain comes to city!`,
-        `Hero fights with super power!`,
-        `Hero saves everyone! Happy Ending!`
-      ]
-    });
+    res.json({ story: completion.choices[0].message.content });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-const PORT = process.env.PORT || 5000;
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => console.log(`ComicCraft running at http://localhost:${PORT}`));
-}
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server on ${PORT}`));
+
 module.exports = app;
