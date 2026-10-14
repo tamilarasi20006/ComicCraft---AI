@@ -45,4 +45,8 @@ app.post('/generate', async (req, res) => {
   }
 });
 
-app.listen(5000, () => console.log('ComicCraft running at http://localhost:5000 - NO ERROR!'));
+const PORT = process.env.PORT || 5000;
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`ComicCraft running at http://localhost:${PORT}`));
+}
+module.exports = app;
