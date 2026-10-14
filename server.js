@@ -6,9 +6,8 @@ require('dotenv').config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
-// BOTH routes - ithu than mukkiyam da!
 app.post(['/generate', '/api/generate'], async (req, res) => {
   try {
     const { story, style } = req.body;
@@ -37,7 +36,6 @@ app.post(['/generate', '/api/generate'], async (req, res) => {
     if (!response.ok) return res.status(500).json({ error: data.error?.message || "Groq error" });
 
     const content = data.choices[0].message.content;
-    // Try to parse JSON from LLM
     let comicData;
     try {
       const jsonMatch = content.match(/\[.*\]/s);
@@ -45,7 +43,6 @@ app.post(['/generate', '/api/generate'], async (req, res) => {
     } catch {
       comicData = [{ panel: 1, text: content, imagePrompt: story }];
     }
-
     res.json({ comic: comicData });
   } catch (err) {
     console.error(err);
@@ -54,10 +51,9 @@ app.post(['/generate', '/api/generate'], async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// VERCEL KU EXPORT - ITHU ILLANA 404 THAN VARUM!
 module.exports = app;
 
 if (require.main === module) {
