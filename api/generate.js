@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
     return res.status(200).end();
   }
 
-  if (req.method !== "POST") {
+  if (req.method!== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -16,91 +16,61 @@ module.exports = async (req, res) => {
     const groqKey = process.env.GROQ_API_KEY;
 
     if (!groqKey) {
-      return res.status(500).json({
-        error: "GROQ_API_KEY missing in Vercel Settings"
-      });
+      return res.status(500).json({ error: "GROQ_API_KEY missing in Vercel Settings" });
     }
 
-    if (!story || typeof story !== "string") {
-      return res.status(400).json({
-        error: "Please enter a story"
-      });
+    if (!story || typeof story!== "string") {
+      return res.status(400).json({ error: "Story is required" });
     }
 
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: Bearer ${groqKey},
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            {
-              role: "system",
-              content:
-                You are a comic creator. Create exactly 4 comic panels in ${style || "cartoon"} style. Return ONLY valid JSON in this format: {"panels":[{"title":"Panel 1","text":"...","imagePrompt":"..."},{"title":"Panel 2","text":"...","imagePrompt":"..."},{"title":"Panel 3","text":"...","imagePrompt":"..."},{"title":"Panel 4","text":"...","imagePrompt":"..."}]}.
-            },
-            {
-              role: "user",
-              content: story
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 1200
-        })
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("Groq Error:", data);
-      return res.status(502).json({
-        error: data.error?.message || "Groq API error"
-      });
-    }
-
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      return res.status(502).json({
-        error: "No content received from Groq"
-      });
-    }
-
-    let panelsData;
-
-    try {
-      const cleaned = content
-        .replace(/json/gi, "")
-        .replace(//g, "")
-        .trim();
-
-      panelsData = JSON.parse(cleaned);
-    } catch (parseError) {
-      console.error("JSON Parse Error:", parseError);
-
-      return res.status(502).json({
-        error: "Groq returned invalid JSON. Please try again."
-      });
-    }
-
-    if (!Array.isArray(panelsData.panels)) {
-      return res.status(502).json({
-        error: "Invalid comic format: panels must be an array"
-      });
-    }
-
-    return res.status(200).json(panelsData);
-
-  } catch (error) {
-    console.error("Server Error:", error);
-
-    return res.status(500).json({
-      error: error.message || "Internal server error"
+    const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${groqKey}`
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `You create comics. Return ONLY JSON array like [{"title":"Panel 1","description":"scene","dialogue":"hi"}]. 4 panels. Style: ${style || 'cartoon'}`
+          },
+          {
+            role: "user",
+            content: `Story: ${story}`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
+      })
     });
+
+    const data = await groqResponse.json();
+
+    if (!groqResponse.ok) {
+      return res.status(500).json({ error: data.error?.message || "Groq API failed" });
+    }
+
+    let content = data.choices?.[0]?.message?.content || "";
+    content = content.replace(/```json|```/g, "").trim();
+
+    let panels;
+    try {
+      panels = JSON.parse(content);
+    } catch {
+      panels = content.split("\n").filter(l => l.trim()).slice(0,4).map((line, i) => ({
+        title: `Panel ${i+1}`,
+        description: line,
+        dialogue: line
+      }));
+    }
+
+    if (!Array.isArray(panels)) panels = [panels];
+
+    return res.status(200).json({ panels });
+
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 };
