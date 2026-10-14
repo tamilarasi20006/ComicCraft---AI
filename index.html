@@ -38,7 +38,7 @@ async function generate(){
   document.getElementById('result').style.display='block';
   document.getElementById('panels').innerHTML = '<p>Generating... Wait da!</p>';
   
-  const res = await fetch('/generate', {
+  const res = await fetch('/api/generate', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ story: story, style: style })
